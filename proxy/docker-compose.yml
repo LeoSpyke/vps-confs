@@ -1,0 +1,52 @@
+---
+version: "3.8"
+services:
+  swag:
+    image: lscr.io/linuxserver/swag
+    container_name: proxy
+    cap_add:
+      - NET_ADMIN
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=${TZ}
+      - URL=${DUCK_DOMAIN}
+      - SUBDOMAINS=wildcard
+      - VALIDATION=duckdns
+      - DUCKDNSTOKEN=${DUCK_TOKEN}
+      - STAGING=false
+      #- DOCKER_MODS=linuxserver/mods:swag-dbip
+    volumes:
+      - ${BASE_PATH}/swag_proxy:/config
+    networks:
+      - net_proxy
+    ports:
+      - 8443:443
+      #- 8080:80
+    depends_on:
+      - duckdns
+    restart: unless-stopped
+
+  duckdns:
+    image: lscr.io/linuxserver/duckdns:latest
+    container_name: duckdns
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=${TZ}
+      - SUBDOMAINS=${DUCK_DOMAIN}
+      - TOKEN=${DUCK_TOKEN}
+      - LOG_FILE=false
+    restart: unless-stopped
+
+  watchtower:
+    image: containrrr/watchtower
+    container_name: watchtower
+    command: --cleanup --log-level info --schedule '0 0 2 * * *' --stop-timeout 30s
+    environment:
+      - TZ=${TZ}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+
+networks:
+  net_proxy:
